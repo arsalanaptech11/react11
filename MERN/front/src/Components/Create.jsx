@@ -1,84 +1,118 @@
-import axios from 'axios'
-import React, { useState } from 'react'
-import { ToastContainer, toast } from 'react-toastify'
-import "react-toastify/dist/ReactToastify.css"
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { z } from "zod";
+
+// Zod schema
+const schema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  email: z.string().email("Invalid email"),
+  passw: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(
+      /(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/,
+      "Password must contain upper, lower, number & special char"
+    ),
+  age: z.coerce.number().min(1, "Age must be a positive number"),
+});
 
 export const Create = () => {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [passw, setPassw] = useState("")
-  const [age, setAge] = useState(1)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({
+    resolver: zodResolver(schema),
+  });
 
-  async function SubmitFunc() {
+  const onSubmit = async (data) => {
     try {
-      const user_regex = /^[a-zA-Z0-9_]{3,16}$/
-      const pass_regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/
-
-      if (!name || !email || !passw || age <= 0 ) {
-        toast.error("All Fields are Required")
-        return
+      await axios.post("http://localhost:3008/save", data);
+      toast.success("User registered successfully");
+      reset();
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        toast.error(err.response.data.msg);
+      } else {
+        toast.error("Something went wrong");
+        console.log(err);
       }
-
-      if (!user_regex.test(name)) {
-        toast.error("Invalid Username")
-        return
-      }
-      if (!pass_regex.test(passw)) {
-        toast.error("Password Must Be Strong")
-        return
-      }
-
-      await axios.post("http://localhost:3008/save", {
-        Name: name,
-        Email: email,
-        Passw: passw,
-        Age: age
-
-
-      }).then(() => {
-        toast.success("Data Saved Succesfully")
-      }).catch((e) => {
-        if (e.status === 409) {
-          alert(e.response.data.msg)
-
-        } else {
-          console.log(e.message)
-        }
-
-      })
-
-    } catch (error) {
-      console.log(error)
-
     }
+  };
 
-  }
   return (
-    <div>
-      <div class="container mt-5">
-      <ToastContainer/>
-        <h2>Registration Form</h2>
-        <form>
-          <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <input type="text" class="form-control" id="name" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email address</label>
-            <input type="email" class="form-control" id="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" placeholder="Enter your password" value={passw} onChange={(e) => setPassw(e.target.value)} />
-          </div>
-          <div class="mb-3">
-            <label for="age" class="form-label">Age</label>
-            <input type="number" class="form-control" id="age" placeholder="Enter your age" value={age} onChange={(e) => setAge(e.target.value)} />
-          </div>
-          <button type="button" class="btn btn-primary" onClick={SubmitFunc}>Submit</button>
-        </form>
-      </div>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow">
+      <ToastContainer />
+      <h2 className="text-2xl font-bold mb-6 text-center">Registration Form</h2>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        {/* Name */}
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Name</label>
+          <input
+            type="text"
+            {...register("name")}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your name"
+          />
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+          )}
+        </div>
 
+        {/* Email */}
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Email</label>
+          <input
+            type="email"
+            {...register("email")}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your email"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+
+        {/* Password */}
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Password</label>
+          <input
+            type="password"
+            {...register("passw")}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter a strong password"
+          />
+          {errors.passw && (
+            <p className="text-red-500 text-sm mt-1">{errors.passw.message}</p>
+          )}
+        </div>
+
+        {/* Age */}
+        <div className="mb-6">
+          <label className="block mb-1 font-medium">Age</label>
+          <input
+            type="number"
+            {...register("age")}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your age"
+          />
+          {errors.age && (
+            <p className="text-red-500 text-sm mt-1">{errors.age.message}</p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition"
+        >
+          Submit
+        </button>
+      </form>
     </div>
-  )
-}
+  );
+};
